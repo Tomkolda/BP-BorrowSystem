@@ -1,0 +1,61 @@
+﻿@inject CategoriesService CategoryController
+@inject ThingsToBorrowService ThingsController
+@inject NavigationManager NavManager
+@inject IStringLocalizer<Add_borrow_thing> Localize
+@attribute [Authorize]
+@page "/add_borrow_thing"
+
+<h3>@Localize["header"]</h3>
+
+<form onsubmit="@SubmitForm">
+    <label>@Localize["name"]</label>
+    <br>
+    <input type="text" @bind="name" required />
+    <br>
+    <label>@Localize["inventory_number"]</label>
+    <br>
+    <input type="text" @bind="inventorynumber" />
+    <br>
+    <div class="col-12 row">
+        <label class="col-2 font-weight-bold">Categories :</label>
+        <CheckBoxList Data="@categories"
+                      TextField="@((item)=>item.Name)"
+                      ValueField="@((item)=>item.Id)"
+                      SelectedValues="@SelectedIds" />
+    </div>
+    <br />
+    <input type="submit" value=@Localize["submit"] />
+</form>
+
+@code {
+    private String name;
+    private int inventorynumber;
+    private IEnumerable<Category> categories;
+    protected List<string> SelectedIds = new List<string>();
+
+
+    protected override void OnInitialized()
+    {
+        categories = CategoryController.GetCategories();
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        categories = CategoryController.GetCategories();
+    }
+
+    public async Task SubmitForm()
+    {
+        Things_To_Borrow thing = new()
+            {
+                Name = name,
+                Inventory_number = inventorynumber
+
+            };
+        ThingsController.AddThing(thing, SelectedIds);
+        NavManager.NavigateTo("/all_borrow_things", true);
+
+    }
+
+
+}

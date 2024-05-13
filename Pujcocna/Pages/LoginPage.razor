@@ -1,0 +1,71 @@
+﻿@using Půjčovna.Authentication
+@layout LoginLayout
+@inject EmployeeService EmployeeController
+@inject NavigationManager navManager
+@inject MyEmployeeContainer employeeContainer
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager NavigationManager
+
+@page "/"
+
+<style>
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 50vh;
+    }
+</style>
+<div class="container">
+	<div class="screen">
+		<div class="screen__content">
+			<form class="login" @onsubmit="userlogin">
+				<div class="login__field">
+					<i class="login__icon fas fa-user"></i>
+					<input type="text" class="login__input" placeholder="User name" @bind="username">
+				</div>
+				<div class="login__field">
+					<i class="login__icon fas fa-lock"></i>
+					<input type="password" class="login__input" placeholder="Password" @bind="pass">
+				</div>
+				<button class="button login__submit" type="submit">
+					<span class="button__text">Log In Now</span>
+					<i class="button__icon fas fa-chevron-right"></i>
+				</button>
+			</form>
+		</div>
+		<div class="screen__background">
+			<span class="screen__background__shape screen__background__shape4"></span>
+			<span class="screen__background__shape screen__background__shape3"></span>
+			<span class="screen__background__shape screen__background__shape2"></span>
+			<span class="screen__background__shape screen__background__shape1"></span>
+		</div>
+	</div>
+</div>
+
+
+@code {
+	private string username;
+	private string pass;
+	private Employee employe;
+	private string text;
+
+
+	private async Task userlogin()
+	{
+		employe = EmployeeController.GetEmployeeByLogin(username);
+		if (employe == null || employe.Password != pass)
+		{
+			await JSRuntime.InvokeVoidAsync("alert", "Invalid User Name or Password");
+			return;
+		}
+		var customAuthStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
+		await customAuthStateProvider.UpdateAuthenticationState(new UserSession
+			{
+				UserName = employe.Login,
+				Role = employe.role.ToString()
+			});
+		employeeContainer.SetValue(employe);
+		navManager.NavigateTo("/home", true);
+	}
+}

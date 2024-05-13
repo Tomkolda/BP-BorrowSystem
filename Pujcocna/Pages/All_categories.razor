@@ -1,0 +1,63 @@
+﻿@page "/all_categories"
+@inject CategoriesService categoriesController
+@inject NavigationManager NavManager
+@inject IStringLocalizer<All_categories> Localize
+
+<h3>@Localize["header"]</h3>
+
+<body>
+    <p><button id="add" @onclick="addCategory">@Localize["add"]</button></p>
+    <table id="categories" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>@Localize["name"]</th>
+                <th>@Localize["deposit"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var category in categories)
+            {
+                <ContextMenuTrigger WrapperTag="tr" MenuId="tableContextMenu" Data="category">
+                    <td>@category.Name</td>
+                    <td>@category.Default_deposit</td>
+                </ContextMenuTrigger>
+            }
+        </tbody>
+    </table>
+
+    <ContextMenu Id="tableContextMenu">
+        <Item OnClick="@EditCategory"> <i class="fas fa-sync-alt blue-icon"></i> @Localize["edit"]</Item>
+        <Item OnClick="@DeleteClick"> <i class="fas fa-trash-alt red-icon"></i> @Localize["delete"]</Item>
+    </ContextMenu>
+</body>
+
+@code {
+    public IEnumerable<Category> categories;
+
+    protected override void OnInitialized()
+    {
+        categories = categoriesController.GetCategories();
+    }
+
+    private void addCategory()
+    {
+        NavManager.NavigateTo("/add_category");
+    }
+
+    private void EditCategory(ItemClickEventArgs e)
+    {
+
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        categories = categoriesController.GetCategories();
+        await JSRuntime.InvokeAsync<object>("ClientsAndBorrows", "#categories");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    void DeleteClick(ItemClickEventArgs e)
+    {
+        
+    }
+
+}

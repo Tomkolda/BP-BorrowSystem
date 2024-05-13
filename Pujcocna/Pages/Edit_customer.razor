@@ -1,0 +1,99 @@
+﻿@page "/edit_customer"
+@inject CustomerService CustomerController
+@inject ContactPersonService ContactPersonController
+@inject NavigationManager navigation
+@inject IStringLocalizer<Edit_customer> Localize
+@inject MyCustomerContainer myCustomerContainer
+@attribute [Authorize]
+<h3>Edit_Customer</h3>
+
+
+
+<form onsubmit="@SubmitForm">
+    <strong><label>@Localize["company"]</label></strong>
+    <br>
+    <label>@Localize["namec"]</label>
+    <br>
+    <input type="text" required @bind=namec/>
+    <br>
+    <label>@Localize["idnumberc"]</label>
+    <br>
+    <input type="text" @bind=idnumber/>
+    <br>
+    <strong><label>@Localize["contactp"]</label></strong>
+    <br>
+    <label>@Localize["name"]</label>
+    <br>
+    <input type="text" required @bind=name/>
+    <br>
+    <label>@Localize["surname"]</label>
+    <br>
+    <input type="text" required @bind=fname />
+    <br>
+    <label>@Localize["phone"]:</label>
+    <br>
+    <input type="text" required @bind=phone />
+    <br>
+    <label>@Localize["email"]</label>
+    <br>
+    <input type="text" required @bind=email />
+    <br>
+    <label>@Localize["idcard"]</label>
+    <br>
+    <input type="text" required @bind=idcard />
+    <br>
+    <br>
+    <input type="submit" value=@Localize["submit"] />
+</form>
+
+@code {
+    private string namec { get; set; }
+    private string idnumber { get; set; }
+    private string name { get; set; }
+    private string fname { get; set; }
+    private string phone { get; set; }
+    private string email { get; set; }
+    private string idcard { get; set; }
+    private int idcust { get; set; }
+    private int idcon { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        namec = myCustomerContainer.customer.Name;
+        idnumber = myCustomerContainer.customer.Idnumber;
+        name = myCustomerContainer.contact.Name;
+        fname = myCustomerContainer.contact.Surname;
+        phone = myCustomerContainer.contact.Phone;
+        email = myCustomerContainer.contact.Email;
+        idcard = myCustomerContainer.contact.IDcard_number;
+        idcust = myCustomerContainer.customer.Id;
+        idcon = myCustomerContainer.contact.Id;
+
+    }
+
+
+    public async Task SubmitForm()
+    {
+        Customer customer = new()
+            {
+                Id = idcust,
+                Name = namec,
+                Idnumber = idnumber
+            };
+        Contact_Person contact_Person = new()
+            {
+                Id = idcon,
+                Name = name,
+                Surname = fname,
+                Phone = phone,
+                Email = email,
+                IDcard_number = idcard,
+                CustomerId = idcust
+            };
+
+        CustomerController.UpdateCustomer(customer);
+        ContactPersonController.UpdateContactPerson(contact_Person);
+        navigation.NavigateTo("/all_clients", true);
+    }
+}

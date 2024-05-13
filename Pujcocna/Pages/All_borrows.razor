@@ -1,0 +1,75 @@
+﻿@page "/all_borrows"
+@inject BorrowsService BorrowsController
+@inject ContactPersonService ContactPersonController
+@inject IStringLocalizer<All_borrows> Localize
+@inject NavigationManager navigation
+@attribute [Authorize]
+
+<PageTitle>@Localize["title"]</PageTitle>
+
+<h3>@Localize["header"]</h3>
+<body>
+    <table id="borrows" class="display" style="width:100%" >
+        <thead>
+            <tr>
+                <th>@Localize["borrow_number"]</th>
+                <th>@Localize["first_name"]</th>
+                <th>@Localize["family_name"]</th>
+                <th>@Localize["phone_number"]</th>
+                <th>@Localize["email"]</th>
+                <th>@Localize["date_from"]</th>
+                <th>@Localize["date_to"]</th>
+                <th>@Localize["prize"]</th>
+                <th>@Localize["deposit"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var borrow in borrows)        
+            {
+                var per = ContactPersonController.GetContactPerson(borrow.Contact_PersonID);
+               <ContextMenuTrigger WrapperTag="tr" MenuId="tblContextMenu" Data="borrow">
+                    <td>@borrow.Borrow_Number</td>
+                    <td>@per.Name</td>
+                    <td>@per.Surname</td>
+                    <td>@per.Phone</td>
+                    <td>@per.Email</td>
+                    <td>@borrow.Borrow_Date_From.ToShortDateString()</td>
+                    <td>@borrow.Borrow_Date_To.ToShortDateString()</td>
+                    <td>@borrow.Total_Prize</td>
+                    <td>@borrow.Total_Deposit</td>
+                </ContextMenuTrigger>
+            }
+        </tbody>
+    </table>
+    <ContextMenu Id="tblContextMenu">
+        <Item OnClick="@DeleteClick">@Localize["delete"]</Item>
+    </ContextMenu>
+</body>
+
+@code {
+    private IEnumerable<Borrows> borrows;
+
+    protected override async Task OnInitializedAsync()
+    {
+        borrows = BorrowsController.GetAllBorrows();
+    }
+
+    async Task ReloadClick(ItemClickEventArgs e)
+    {
+        borrows = BorrowsController.GetAllBorrows();
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        borrows = BorrowsController.GetAllBorrows();
+        await JSRuntime.InvokeAsync<object>("ClientsAndBorrows", "#borrows");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    void DeleteClick(ItemClickEventArgs e)
+    {
+        Console.WriteLine("Polozka odstranena");
+        navigation.NavigateTo("/all_borrows", true);
+    }
+
+}

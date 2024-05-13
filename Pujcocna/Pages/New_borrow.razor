@@ -1,0 +1,681 @@
+﻿@page "/new_borrow"
+@using DocumentFormat.OpenXml.Drawing
+@using DocumentFormat.OpenXml.Office.Drawing
+@using DocumentFormat.OpenXml.Packaging
+@using Spire.Doc
+@using System.Drawing
+@using System.IO
+@using A = DocumentFormat.OpenXml.Drawing;
+@using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
+@using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+
+@attribute [Authorize]
+@inject ContactPersonService ContactPersonController
+@inject CategoriesService CategoryController
+@inject ThingsToBorrowService ThingsToBorrowController
+@inject BorrowsService BorrowsController
+@inject Borrow_thingsService Borrow_thingsController
+@inject NavigationManager NavManager
+@inject MyBorrowContainer borrowContainer
+@inject MyEmployeeContainer employeeContainer
+@inject IStringLocalizer<New_borrow> Localize
+
+<PageTitle>Nová výpujčka</PageTitle>
+
+<style>
+    .selected {
+        background-color: #ff00ff;
+    }
+
+    tr {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+}
+
+</style>
+<body>
+<h1>@Localize["header"]</h1>
+    <button @onclick="Showpopup">@Localize["addcust"]</button>
+<br />
+@if(popup) //modal for client choose
+{
+    <div class="modal" tabindex="-1" role="dialog" style="display:block;">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                        <h5 class="modal-title">@Localize["choosecust"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="Closepopup"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="search" onkeyup="Search()" placeholder="Search for names..">
+                    <table id="clients" class="display" style="width:100%" border="1">
+                        <thead>
+                            <tr>
+                                <th>@Localize["name"]</th>
+                                <th>@Localize["surname"]</th>
+                                <th>@Localize["phone"]</th>
+                                <th>@Localize["email"]</th>
+                                <th>@Localize["idcard"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var contactperson in contactPersons)
+                            {
+                                <tr @onclick="() => SelectPer(contactperson)" class="@((selectedPer == contactperson) ? "selected" : "")">
+                                       <td>@contactperson.Name</td>
+                                       <td>@contactperson.Surname</td>
+                                       <td>@contactperson.Phone</td>
+                                       <td>@contactperson.Email</td>
+                                       <td>@contactperson.IDcard_number</td>
+                                </tr>
+
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="@Closepopup">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@if (selectedPer != null) //show selected client + date, etc.
+{
+    <br />
+    <table id="client" class="display" style="width:50%">
+        <thead>
+            <tr>
+                 <th>@Localize["name"]</th>
+                 <th>@Localize["surname"]</th>
+                 <th>@Localize["phone"]</th>
+                 <th>@Localize["email"]</th>
+                 <th>@Localize["idcard"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>@selectedPer.Name</td>
+                <td>@selectedPer.Surname</td>
+                <td>@selectedPer.Phone</td>
+                <td>@selectedPer.Email</td>
+                <td>@selectedPer.IDcard_number</td>
+            </tr>
+        </tbody>
+    </table>
+    <br />
+    <div>
+        <label for="datefrom">@Localize["datef"]:</label>
+        <span style="margin-right: 70px;"></span>
+        <label for="dateto">@Localize["datet"]:</label>
+    </div>
+    <div>
+        <input id="datefrom" type="date" style="display: inline-block;" @bind="datefrom">
+        <span style="margin-right: 8px;"></span>
+        <input id="date to" type="date" style="display: inline-block;" @bind="dateto">
+    </div>
+    <br />
+    <button @onclick="Showcategories">@Localize["addcat"]</button>
+    <br />
+    @if (showcat) //show modal for categories
+    {
+        <div class="modal" tabindex="-1" role="dialog" style="display:block;">
+            <div class="modal-dialog modal-m">
+                <div class="modal-content">
+                    <div class="modal-header">
+                            <h5 class="modal-title">@Localize["choosecat"]</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="Closecategories"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table id="categories" class="display" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>@Localize["namecat"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var category in categories)
+                                {
+                                    <tr @onclick="() => SelectCat(category)" class="@((selectedCat == category) ? "selected" : "")">
+                                        <td>@category.Name</td>
+                                    </tr>
+
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="@Closecategories">Ok</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (categoriesSelect.Count != 0) //show selected categorie
+    {
+        <br />
+        <table id="borrowthings" class="display" style="width:60%">
+            <thead>
+                <tr>
+                      <th>@Localize["namec"]</th>
+                      <th>@Localize["depositc"]</th>
+                      <th>@Localize["prizec"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var category in categoriesSelect)
+                {
+                    <tr>
+                        <td>@category.Name</td>
+                        <td><input value=@category.Default_deposit @oninput="HandleDepositChange" @onblur="(eventArgs) => HandleDepositBlur(eventArgs, category.Id)" /></td>
+                        <td><input @oninput="HandlePrizeChange" @onblur="(eventArgs) => HandlePrizeBlur(eventArgs, category.Id)" /></td>
+                        <td><button @onclick="() => Deletecat(category)">@Localize["remove"]</button></td>
+                    </tr>
+                        @if (thingscategory.ContainsValue(category.Id))
+                    {
+                            @foreach (KeyValuePair<Things_To_Borrow, int> kvp in thingscategory)
+                        {
+                            @if (kvp.Value == category.Id)
+                            {
+                                <tr>
+                                    <td>@kvp.Key.Inventory_number</td>
+                                    <td>@kvp.Key.Name</td>
+                                        <td><button @onclick="() => Showthings(category)">@Localize["change"] @category.Name @Localize["toborrow"]</button></td>
+
+                                </tr>
+                            }
+                        }
+                        
+                    } 
+                    else
+                    {
+                        <tr>
+                                <td><button @onclick="() => Showthings(category)">@Localize["addt"] @category.Name @Localize["toborrow"]</button></td>
+                        </tr> 
+                    }
+                }
+                    
+            </tbody>
+        </table>
+    }
+    @if (showthings)
+    {
+        <div class="modal" tabindex="-1" role="dialog" style="display:block;">
+            <div class="modal-dialog modal-l">
+                <div class="modal-content">
+                    <div class="modal-header">
+                            <h5 class="modal-title">@Localize["chooset"]</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="Closething"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table id="things" class="display" style="width:100%">
+                            <thead>
+                                <tr>
+                                        <th>@Localize["inventorynumber"]</th>
+                                        <th>@Localize["nameth"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var thing in thingsToBorrow)
+                                {
+                                    <tr @onclick="() => SelectThing(thing)" class="@((selectedThing == thing) ? "selected" : "")">
+                                        <td>@thing.Inventory_number</td>
+                                        <td>@thing.Name</td>
+                                    </tr>
+
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="@Closething">Ok</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    <br />
+    <div>
+        <label>@Localize["deposit"]:</label>
+        <label>@Deposit Kč</label>
+    </div>
+    <div>
+        <label>@Localize["prize"]:</label>
+        <label>@Prize Kč</label>
+    </div>
+    <br />
+    <button @onclick="ShowSigniture">@Localize["signature"]</button>
+    @if (signit)
+    {
+          <SignaturePad @bind-Value="Input.Signature" style="width: 30%" />
+    }
+    <br />
+   @if (Input.Signature.Any())
+       {
+           <button @onclick="CreateBorrow">@Localize["craete"]</button>
+       }
+    }
+</body>
+<script>
+    function Search() {
+        var input, filter, table, tr, td, i, txtValue;
+        input = document.getElementById("search");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("clients");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 0; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td")[1];
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+</script>
+
+@code {
+
+    bool showthings = false;
+    bool popup = false;
+    bool showcat = false;
+    bool signit = false;
+
+    private IEnumerable<Contact_Person> contactPersons;
+    private IEnumerable<Category> categories;
+    private List<Things_To_Borrow> thingsToBorrow = new List<Things_To_Borrow>();
+
+    private string image;
+
+    private string newDeposit;
+    private string newPrize;
+    private string note = "";
+
+    private int LastBorrowNumber;
+    private int Deposit;
+    private int Prize;
+    private int idCat;
+
+
+    private Contact_Person selectedPer;
+    private Category selectedCat;
+    private Things_To_Borrow selectedThing;
+    private List<Category> categoriesSelect = new List<Category>();
+    private Dictionary<Things_To_Borrow, int> thingscategory = new Dictionary<Things_To_Borrow, int>(); //thing to borrow, CategoryId
+    private Dictionary<int, int> deposits = new Dictionary<int, int>(); //categoryID, deposit
+    private Dictionary<int, int> prizes = new Dictionary<int, int>(); //categoryID, prize
+
+    private DateTime datefrom = DateTime.Now.Date;
+    private DateTime dateto = DateTime.Now.Date;
+
+    public MyInput Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (int.TryParse(await JSRuntime.InvokeAsync<string>("localStorage.getItem", "lastOrderNumber"), out int lastOrderNumber))
+        {
+            LastBorrowNumber = lastOrderNumber;
+        }
+        else
+        {
+            LastBorrowNumber = 1;
+        }
+    }
+
+    private void SelectPer(Contact_Person item)
+    {
+        selectedPer = item;
+    }
+
+    private async Task CreateBorrow()
+    {
+        Borrows borrow = new()
+            {
+                Borrow_Number = LastBorrowNumber,
+                Borrow_Date_From = datefrom,
+                Borrow_Date_To = dateto,
+                Total_Deposit = Deposit,
+                Total_Prize = Prize,
+                Note = note,
+                Signature = Input.SignatureAsBase64,
+                Contact_PersonID = selectedPer.Id,
+                EmployeeID = employeeContainer.employee.Id
+            };
+
+        BorrowsController.InsertBorrow(borrow);
+        borrowContainer.SetValue(borrow);
+        List<Borrow_things> borrow_Things = new List<Borrow_things>();
+        int id = BorrowsController.GetBorrowId(borrow);
+        foreach (KeyValuePair<Things_To_Borrow, int> kvp in thingscategory)
+        {
+            int deposit = deposits[kvp.Value];
+            int prize = prizes[kvp.Value];
+            Borrow_things thing = new()
+                {
+                    Things_To_BorrowID = kvp.Key.Id,
+                    BorrowsId = id,
+                    Real_Deposit = deposit,
+                    Prize = prize,
+                    CategoryID = kvp.Value
+
+                };
+            borrow_Things.Add(thing);
+        }
+        Borrow_thingsController.InsertThings(borrow_Things);
+        string filename = LastBorrowNumber+".png";
+        Download(Input.SignatureAsBase64, filename);
+        CreateDocument();
+        LastBorrowNumber++;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "lastOrderNumber", LastBorrowNumber.ToString());
+        NavManager.NavigateTo("/borrow_detail", true);
+    }
+
+    public static void Download(string dataURL, string filename)
+    {
+        byte[] bytes = DataURLToByteArray(dataURL);
+
+        File.WriteAllBytes(filename, bytes);
+
+        Console.WriteLine("File downloaded successfully.");
+    }
+
+    public static byte[] DataURLToByteArray(string dataURL)
+    {
+        string[] parts = dataURL.Split(new string[] { ";base64," }, StringSplitOptions.RemoveEmptyEntries);
+        string contentType = parts[0].Split(':')[1];
+        string base64Data = parts[1];
+
+        byte[] bytes = Convert.FromBase64String(base64Data);
+        return bytes;
+    }
+
+    private void CreateDocument()
+    {
+        string filename = LastBorrowNumber + ".png";
+        var templateFilename = "Template.docx";
+        var destinationFilename = LastBorrowNumber.ToString()+".docx";
+        File.Copy(templateFilename, destinationFilename);
+        using (WordprocessingDocument doc = WordprocessingDocument.Open(destinationFilename, true))
+        {
+            MainDocumentPart mainPart = doc.MainDocumentPart;
+            DocumentFormat.OpenXml.Drawing.Break lineBreak = new DocumentFormat.OpenXml.Drawing.Break();
+
+            ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
+            using (FileStream stream = new FileStream(filename, FileMode.Open))
+            {
+                imagePart.FeedData(stream);
+            }
+
+
+            TextReplacer.SearchAndReplace(doc, "[ordernumber]", LastBorrowNumber.ToString(), true);
+            TextReplacer.SearchAndReplace(doc, "[name]", selectedPer.Name, true);
+            TextReplacer.SearchAndReplace(doc, "[surname]", selectedPer.Surname, true);
+            TextReplacer.SearchAndReplace(doc, "[datefrom]", borrowContainer.borrow.Borrow_Date_From.ToString(), true);
+            TextReplacer.SearchAndReplace(doc, "[dateto]", borrowContainer.borrow.Borrow_Date_To.ToString(), true);
+            int categoryIndex = 1;
+            foreach (var category in categoriesSelect)
+            {
+                TextReplacer.SearchAndReplace(doc, "[CATEGORY_MARKER]", "[category" + categoryIndex + "]" + "\t" + "[depositcategory" + categoryIndex + "]" + " Kč  " + "[prizecategory" + categoryIndex + "]"
+                + " Kč " + "[THING_MARKER]" + "[CATEGORY_MARKER]", true);
+                TextReplacer.SearchAndReplace(doc, $"[category{categoryIndex}]", category.Name, true);
+                TextReplacer.SearchAndReplace(doc, $"[depositcategory{categoryIndex}]", deposits[category.Id].ToString(), true);
+                TextReplacer.SearchAndReplace(doc, $"[prizecategory{categoryIndex}]", prizes[category.Id].ToString(), true);
+                int thingIndex = 1;
+                foreach (KeyValuePair<Things_To_Borrow, int> kvp in thingscategory)
+                {
+                    if(kvp.Value == category.Id)
+                    {
+                        TextReplacer.SearchAndReplace(doc, "[THING_MARKER]", $"[inentorynumber{thingIndex}]" + "        " + $"[namething{thingIndex}]" + "\r\n" + "[THING_MARKER]" + "\r\n", true);
+                        TextReplacer.SearchAndReplace(doc, $"[inentorynumber{thingIndex}]", kvp.Key.Inventory_number.ToString(), true);
+                        TextReplacer.SearchAndReplace(doc, $"[namething{thingIndex}]", kvp.Key.Name, true);
+                        thingIndex++;
+                    }
+                }
+                categoryIndex++;
+            }
+
+
+
+            TextReplacer.SearchAndReplace(doc, "[CATEGORY_MARKER]", "", true);
+            TextReplacer.SearchAndReplace(doc, "[THING_MARKER]", "", true);
+            TextReplacer.SearchAndReplace(doc, "[totaldeposit]", Deposit.ToString(), true);
+            TextReplacer.SearchAndReplace(doc, "[totalprize]", Prize.ToString(), true);
+            TextReplacer.SearchAndReplace(doc, "[employeename]", employeeContainer.employee.Name, true);
+            TextReplacer.SearchAndReplace(doc, "[employeesurname]", employeeContainer.employee.Surname, true);
+
+            foreach (var text in mainPart.Document.Body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>())
+            {
+                if (text.Text.Contains("[signature]"))
+                {
+                    AddImageToBody(doc, mainPart.GetIdOfPart(imagePart));
+                    text.Text = "";
+                }
+            }
+
+
+
+        }
+        var pdfilename = LastBorrowNumber.ToString() + ".pdf";
+        var pdfpath = @".\Pujcovny\" + pdfilename;
+        Document document = new Document();
+        document.LoadFromFile(destinationFilename);
+        document.SaveToFile(pdfilename, FileFormat.PDF);
+        File.Move(pdfilename, pdfpath);
+        File.Delete(destinationFilename);
+        File.Delete(filename);
+    }
+
+    static void AddImageToBody(WordprocessingDocument wordDoc, string relationshipId)
+    {
+        // Define the reference of the image.
+        var element =
+             new Drawing(
+                 new DW.Inline(
+                     new DW.Extent() { Cx = 990000L, Cy = 792000L },
+                     new DW.EffectExtent()
+                         {
+                             LeftEdge = 0L,
+                             TopEdge = 0L,
+                             RightEdge = 0L,
+                             BottomEdge = 0L
+                         },
+                     new DW.DocProperties()
+                         {
+                             Id = (UInt32Value)1U,
+                             Name = "Signature"
+                         },
+                     new DW.NonVisualGraphicFrameDrawingProperties(
+                         new A.GraphicFrameLocks() { NoChangeAspect = true }),
+                     new A.Graphic(
+                         new A.GraphicData(
+                             new PIC.Picture(
+                                 new PIC.NonVisualPictureProperties(
+                                     new PIC.NonVisualDrawingProperties()
+                                         {
+                                             Id = (UInt32Value)0U,
+                                             Name = "Signature.png"
+                                         },
+                                     new PIC.NonVisualPictureDrawingProperties()),
+                                 new PIC.BlipFill(
+                                     new A.Blip(
+                                         new A.BlipExtensionList(
+                                             new A.BlipExtension()
+                                                 {
+                                                     Uri =
+                                                        "{28A0092B-C50C-407E-A947-70E740481C1C}"
+                                                 })
+                                     )
+                                         {
+                                             Embed = relationshipId,
+                                             CompressionState =
+                                             A.BlipCompressionValues.Print
+                                         },
+                                     new A.Stretch(
+                                         new A.FillRectangle())),
+                                 new PIC.ShapeProperties(
+                                     new A.Transform2D(
+                                         new A.Offset() { X = 0L, Y = 0L },
+                                         new A.Extents() { Cx = 990000L, Cy = 792000L }),
+                                     new A.PresetGeometry(
+                                         new A.AdjustValueList()
+                                     )
+                                         { Preset = A.ShapeTypeValues.Rectangle }))
+                         )
+                             { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
+                 )
+                     {
+                         DistanceFromTop = (UInt32Value)0U,
+                         DistanceFromBottom = (UInt32Value)0U,
+                         DistanceFromLeft = (UInt32Value)0U,
+                         DistanceFromRight = (UInt32Value)0U,
+                         EditId = "50D07946"
+                     });
+
+        if (wordDoc.MainDocumentPart is null || wordDoc.MainDocumentPart.Document.Body is null)
+        {
+            throw new ArgumentNullException("MainDocumentPart and/or Body is null.");
+        }
+        wordDoc.MainDocumentPart.Document.Body.AppendChild(new Paragraph(new Run(element)));
+    }
+
+
+
+    private void Deletecat(Category selectedCat)
+    {
+        categoriesSelect.Remove(selectedCat);
+        Deposit -= deposits.GetValueOrDefault(selectedCat.Id);
+        deposits.Remove(selectedCat.Id);
+        Prize -= prizes.GetValueOrDefault(selectedCat.Id);
+        prizes.Remove(selectedCat.Id);
+
+    }
+
+    private void ShowSigniture()
+    {
+        signit = true;
+    }
+
+    private void SelectCat(Category item)
+    {
+        selectedCat = item;
+
+    }
+
+    private void SelectThing(Things_To_Borrow item)
+    {
+        selectedThing = item;
+    }
+
+    private void Showpopup()
+    {
+        popup = true;
+        contactPersons = ContactPersonController.GetContactPersons();
+    }
+
+    private void Closepopup()
+    {
+        popup = false;
+    }
+
+    private void Showcategories()
+    {
+        selectedCat = null;
+        showcat = true;
+        categories = CategoryController.GetCategories();
+    }
+
+    private void Closecategories()
+    {
+        showcat = false;
+        if (selectedCat != null)
+        {
+            categoriesSelect.Add(selectedCat);
+            deposits.Add(selectedCat.Id, selectedCat.Default_deposit);
+            Deposit += selectedCat.Default_deposit;
+        }  
+    }
+    private void Showthings(Category category)
+    {
+        selectedThing = null;
+        List<Things_To_Borrow> things = ThingsToBorrowController.GetThingsFromCategory(category);
+        foreach (var thing in things)
+        {
+           if (thingsToBorrow.Contains(thing))
+           {
+
+           }
+           else
+           {
+               thingsToBorrow.Add(thing);
+           }
+        }
+        idCat = category.Id;
+        showthings = true;
+    }
+
+    private void Closething()
+    {
+        showthings = false;
+        if (selectedThing != null)
+        {
+            if (thingscategory.ContainsKey(selectedThing))
+            {
+                
+            }
+            else{
+                thingscategory.Add(selectedThing, idCat);
+            }
+        }
+        
+    }
+
+    private void HandleDepositChange(ChangeEventArgs e)
+    {
+        newDeposit = e.Value.ToString();
+    }
+
+
+    private void HandleDepositBlur(FocusEventArgs e, int id)
+    {
+        if (newDeposit is not null)
+        {
+            deposits[id] = int.Parse(newDeposit);
+        }
+        Deposit = 0;
+        foreach(KeyValuePair<int, int> kvp in deposits)
+        {
+            Deposit += kvp.Value; 
+        }
+    }
+
+    private void HandlePrizeChange(ChangeEventArgs e)
+    {
+        newPrize = e.Value.ToString();
+    }
+
+
+    private void HandlePrizeBlur(FocusEventArgs e, int id)
+    {
+        if (newPrize is not null)
+        {
+            prizes[id] = int.Parse(newPrize);
+        }
+        Prize = 0;
+        foreach (KeyValuePair<int, int> kvp in prizes)
+        {
+            Prize += kvp.Value;
+        }
+    }
+    public class MyInput
+    {
+        public byte[] Signature { get; set; } = Array.Empty<byte>();
+        public string SignatureAsBase64 => System.Text.Encoding.UTF8.GetString(Signature);
+    }
+
+}

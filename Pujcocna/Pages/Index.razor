@@ -1,0 +1,15 @@
+﻿@page "/home"
+@inject IStringLocalizer<Index> Localize
+@inject MyEmployeeContainer employee
+@attribute [Authorize]
+<PageTitle>Půjčovna</PageTitle>
+
+<h1>@Localize["hello"] @employee.employee.Name</h1>
+
+@DateTime.Now
+
+
+
+@code {
+
+}

@@ -1,0 +1,38 @@
+﻿@page "/add_category"
+@inject CategoriesService categoriesController
+@inject IStringLocalizer<Add_category> Localize
+@inject NavigationManager navManager
+@attribute [Authorize]
+
+<h3>@Localize["header"]</h3>
+<form onsubmit="@SubmitForm">
+    <label>@Localize["name"]</label>
+    <br>
+    <input type="text" @bind="name" required />
+    <br>
+    <label>@Localize["deposit"]</label>
+    <br>
+    <input type="text" @bind="deposit" required />
+    <br>
+    <br>
+    <input type="submit" value=@Localize["submit"] />
+</form>
+
+
+@code {
+    private string name { get; set; }
+    private int deposit { get; set; }
+
+    public async Task SubmitForm()
+    {
+        Category category = new()
+            {
+                Name = name,
+                Default_deposit = deposit
+
+            };
+        categoriesController.AddCategory(category);
+        navManager.NavigateTo("/all_categories", true);
+
+    }
+}

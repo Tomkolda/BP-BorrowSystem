@@ -1,0 +1,82 @@
+﻿@page "/add_customer"
+@inject CustomerService CustomerController
+@inject ContactPersonService ContactPersonController
+@inject NavigationManager navigation
+@inject IStringLocalizer<Add_customer> Localize
+@attribute [Authorize]
+<h3>@Localize["header"]</h3>
+
+<form onsubmit="@SubmitForm">
+    <strong><label>@Localize["company"]</label></strong>
+    <br>
+    <label>@Localize["namec"]</label>
+    <br>
+    <input type="text" @bind="namec" required />
+    <br>
+    <label>@Localize["idnumberc"]</label>
+    <br>
+    <input type="text" @bind="idnumber" />
+    <br>
+    <strong><label>@Localize["contactp"]</label></strong>
+    <br>
+    <label>@Localize["name"]</label>
+    <br>
+    <input type="text" @bind="name" required />
+    <br>
+    <label>@Localize["surname"]</label>
+    <br>
+    <input type="text" @bind="fname" required />
+    <br>
+    <label>@Localize["phone"]:</label>
+    <br>
+    <input type="text" @bind="phone" required />
+    <br>
+    <label>@Localize["email"]</label>
+    <br>
+    <input type="text" @bind="email" required />
+    <br>
+    <label>@Localize["idcard"]</label>
+    <br>
+    <input type="text" @bind="idcard" required />
+    <br>
+    <br>
+    <input type="submit" value=@Localize["submit"] />
+</form>
+
+
+
+@code {
+    private string namec { get; set; }
+    private string idnumber { get; set; }
+    private string name { get; set; }
+    private string fname { get; set; }
+    private string phone { get; set; }
+    private string email { get; set; }
+    private string idcard { get; set; }
+
+
+
+    public async Task SubmitForm()
+    {
+        Customer customer = new()
+            {
+                    Name = namec,
+                    Idnumber = idnumber
+            };
+        CustomerController.InsertCustomer(customer);
+        Contact_Person contact_Person = new()
+            {
+                Name = name,
+                Surname = fname,
+                Phone = phone,
+                Email = email,
+                IDcard_number = idcard,
+                CustomerId = CustomerController.GetCustomerId(customer)
+            };
+        ContactPersonController.InsertContactPerson(contact_Person);
+        navigation.NavigateTo("/all_clients", true);
+
+
+    }
+
+}

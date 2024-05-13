@@ -1,0 +1,64 @@
+﻿@inject EmployeeService employeeController
+@inject NavigationManager NavManager
+@inject IStringLocalizer<All_employee> Localize
+@attribute [Authorize(Roles = "0")]
+@page "/all_employee"
+
+<h3>@Localize["header"]</h3>
+<body>
+    <p><button id="add" @onclick="addEmployee">@Localize["add"]</button></p>
+    <table id="employee" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>@Localize["name"]</th>
+                <th>@Localize["surname"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var employee in employees)
+            {
+                <ContextMenuTrigger WrapperTag="tr" MenuId="tableContextMenu" Data="employee">
+                    <td>@employee.Name</td>
+                    <td>@employee.Surname</td>
+                </ContextMenuTrigger>
+            }
+        </tbody>
+    </table>
+    <ContextMenu Id="tableContextMenu">
+        <Item OnClick="@editEmployee"> @Localize["edit"]</Item>
+        <Item OnClick="@DeleteClick"> @Localize["delete"]</Item>
+    </ContextMenu>
+</body>
+
+@code {
+    private IEnumerable<Employee> employees;
+
+    protected override void OnInitialized()
+    {
+        employees = employeeController.GetAll();
+    }
+
+    public void addEmployee()
+    {
+        NavManager.NavigateTo("/add_employee", true);
+    }
+
+    public void editEmployee()
+    {
+
+    }
+
+    public void DeleteClick(ItemClickEventArgs e)
+    {
+        var currentRow = e.Data as Employee;
+        employeeController.DeleteEmployee(currentRow);
+        NavManager.NavigateTo("/all_employee", true);
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        employees = employeeController.GetAll();
+        await JSRuntime.InvokeAsync<object>("ClientsAndBorrows", "#employee");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

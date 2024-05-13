@@ -1,0 +1,68 @@
+﻿@page "/all_borrow_things"
+@inject ThingsToBorrowService ThingsToBorrowController
+@inject NavigationManager NavManager
+@inject MyThingContainer MyThingContainer
+@attribute [Authorize]
+@inject IStringLocalizer<All_borrow_things> Localize
+
+<h3>@Localize["header"]</h3>
+
+<body>
+    <p><button id="add" @onclick="addThing">@Localize["add"]</button></p>
+    <table id="things" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>@Localize["inventory_number"]</th>
+                <th>@Localize["name"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var thing in borrowthings)
+            {
+            <ContextMenuTrigger WrapperTag="tr" MenuId="tableContextMenu" Data="thing">
+                <td>@thing.Inventory_number</td>
+                <td>@thing.Name</td>
+            </ContextMenuTrigger>
+         }
+        </tbody>
+    </table>
+
+    <ContextMenu Id="tableContextMenu">
+        <Item OnClick="@EditThing"> <i class="fas fa-sync-alt blue-icon"></i> @Localize["edit"]</Item>
+        <Item OnClick="@DeleteClick"> <i class="fas fa-trash-alt red-icon"></i> @Localize["delete"]</Item>
+    </ContextMenu>
+</body>
+
+@code {
+    public IEnumerable<Things_To_Borrow> borrowthings;
+
+    protected override void OnInitialized()
+    {
+        borrowthings = ThingsToBorrowController.GetAllThings();
+    }
+
+    private void addThing()
+    {
+        NavManager.NavigateTo("/add_borrow_thing");
+    }
+
+    private void EditThing(ItemClickEventArgs e)
+    {
+        Things_To_Borrow thing = e.Data as Things_To_Borrow;
+
+        MyThingContainer.SetValue(thing);
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        borrowthings = ThingsToBorrowController.GetAllThings();
+        await JSRuntime.InvokeAsync<object>("ClientsAndBorrows", "#things");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    void DeleteClick(ItemClickEventArgs e)
+    {
+        var currentRow = e.Data as Things_To_Borrow;
+        ThingsToBorrowController.DeleteThing(currentRow);
+        NavManager.NavigateTo("/all_borrow_things", true);
+    }
+}

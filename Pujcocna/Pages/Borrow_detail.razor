@@ -1,0 +1,134 @@
+﻿@inject MyBorrowContainer borrowContainer
+@inject ContactPersonService ContactPersonController
+@inject Borrow_thingsService Borrow_thingsController
+@inject ThingsToBorrowService ThingToBorrowController
+@inject CategoriesService categoryController
+@inject EmployeeService employeeController
+@inject NavigationManager NavManager
+@inject IStringLocalizer<Borrow_detail> Localize
+@attribute [Authorize]
+@page "/borrow_detail"
+<style>
+    tr {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+</style>
+<h3>@Localize["header"] @borrowContainer.borrow.Borrow_Number</h3>
+<br />
+<table id="client" class="display" style="width:50%">
+    <thead>
+        <tr>
+            <th>@Localize["name"]</th>
+            <th>@Localize["surname"]</th>
+            <th>@Localize["phone"]</th>
+            <th>@Localize["email"]</th>
+            <th>@Localize["idcard"]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>@per.Name</td>
+            <td>@per.Surname</td>
+            <td>@per.Phone</td>
+            <td>@per.Email</td>
+            <td>@per.IDcard_number</td>
+        </tr>
+    </tbody>
+</table>
+<br />
+<div>
+    <label for="datefrom">@Localize["datef"]:</label>
+    <span style="margin-right: 75px;"></span>
+    <label for="dateto">@Localize["datet"]:</label>
+</div>
+<div>
+    <label>@dateto.ToShortDateString()</label>
+    <span style="margin-right: 70px;"></span>
+    <label>@datefrom.ToShortDateString()</label>
+</div>
+<br />
+<br />
+ <table id="borrowthings" class="display" style="width:60%">
+     <thead>
+           <tr>
+                <th>@Localize["namec"]</th>
+                <th>@Localize["depositc"]</th>
+                <th>@Localize["prizec"]</th>
+           </tr>
+     </thead>
+     <tbody>
+         @foreach (var category in categoriesSelect)
+             {
+            foreach (KeyValuePair<Things_To_Borrow, int> kvp in things){
+                @if(kvp.Value == category.Id){
+                    <tr>
+                        <td>@category.Name</td>
+                        <td><input readonly value="@deposits[kvp.Key.Id]"/></td>
+                        <td><input readonly value="@prizes[kvp.Key.Id]" /></td>
+                    </tr>
+                    <tr>
+                        <td>@kvp.Key.Inventory_number</td>
+                        <td>@kvp.Key.Name</td>
+                    </tr>
+                }
+            }
+         }
+     </tbody>
+</table>
+<br />
+<br />
+<div>
+    <label>@Localize["deposit"]: </label>
+    <label>@Deposit Kč</label>
+</div>
+<div>
+    <label>@Localize["prize"]: </label>
+    <label>@Prize Kč</label>
+</div>
+<br />
+<label>@Localize["signature"]: </label>
+<img src="@borrowContainer.borrow.Signature" />
+<br />
+<br />
+<label>@Localize["create"]: @employee.Name @employee.Surname</label>
+<br />
+<button @onclick="OK">OK</button>
+
+@code {
+    private Contact_Person per;
+    private DateTime dateto;
+    private DateTime datefrom;
+    private List<Category> categoriesSelect = new List<Category>();
+    private Dictionary<Things_To_Borrow, int> things = new Dictionary<Things_To_Borrow, int>();
+    private Dictionary<int, int> deposits = new Dictionary<int, int>();
+    private Dictionary<int, int> prizes = new Dictionary<int, int>();
+    private int Deposit;
+    private int Prize;
+    private Employee employee; 
+
+    protected override async Task OnInitializedAsync()
+    {
+        per = ContactPersonController.GetContactPerson(borrowContainer.borrow.Contact_PersonID);
+        datefrom = borrowContainer.borrow.Borrow_Date_From;
+        dateto = borrowContainer.borrow.Borrow_Date_To;
+        IEnumerable<Borrow_things> borrow_Things = Borrow_thingsController.GetAllThingsByIDBorrow(borrowContainer.borrow.Id);
+        Deposit = borrowContainer.borrow.Total_Deposit;
+        Prize = borrowContainer.borrow.Total_Prize;
+        foreach(var thing in borrow_Things)
+        {
+            categoriesSelect.Add(categoryController.GetCategory(thing.CategoryID));
+            things.Add(ThingToBorrowController.GetThingByID(thing.Things_To_BorrowID), thing.CategoryID);
+            deposits.Add(thing.Things_To_BorrowID, thing.Real_Deposit);
+            prizes.Add(thing.Things_To_BorrowID, thing.Prize);
+        }
+        employee = employeeController.GetEmployee(borrowContainer.borrow.EmployeeID);
+    }
+
+    private void OK()
+    {
+        NavManager.NavigateTo("/home");
+    }
+}

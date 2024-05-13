@@ -1,0 +1,51 @@
+﻿@page "/add_employee"
+@inject EmployeeService EmployeeController
+@inject NavigationManager navManager
+@attribute [Authorize]
+@inject IStringLocalizer<Add_Employee> Localize
+
+<h3>@Localize["header"]</h3>
+<form onsubmit="@SubmitForm">
+    <label>@Localize["name"]</label>
+    <br>
+    <input type="text" @bind="name" required />
+    <br>
+    <label>@Localize["surname"]</label>
+    <br>
+    <input type="text" @bind="surname" required />
+    <br>
+    <label>@Localize["login"]</label>
+    <br>
+    <input type="text" @bind="login" required />
+    <br>
+    <label>@Localize["pass"]</label>
+    <br>
+    <input type="password" @bind="pass" required />
+    <br>
+    <br>
+    <input type="submit" value=@Localize["submit"] />
+</form>
+
+
+@code {
+    private string name { get; set; }
+    private string surname { get; set; }
+    private string login { get; set; }
+    private string pass { get; set; }
+
+    public async Task SubmitForm()
+    {
+        Employee employee = new()
+            {
+                Name = name,
+                Surname = surname,
+                Login = login,
+                Password = pass,
+                Signature = "",
+                role = 1
+            };
+        EmployeeController.AddEmployee(employee);
+        navManager.NavigateTo("/all_employee", true);
+
+    }
+}

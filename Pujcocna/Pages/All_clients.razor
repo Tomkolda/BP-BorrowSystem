@@ -1,0 +1,108 @@
+﻿@page "/all_clients"
+@inject IStringLocalizer<All_clients> Localize
+@inject MyCustomerContainer myCustomerContainer
+@inject CustomerService CustomerController
+@inject ContactPersonService ContactPersonController
+@inject NavigationManager NavManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+<PageTitle>@Localize["title"]</PageTitle>
+
+<h3>@Localize["header"]</h3>
+
+
+<body>
+    <p><button id="add" @onclick="addCustomer">@Localize["addc"]</button></p>
+    <table id="clients" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th colspan="2">@Localize["customer"]</th>
+                <th colspan="7">@Localize["contact_person"] </th>
+            </tr>
+            <tr>
+                <th>@Localize["name"]</th>
+                <th>@Localize["id_number"]</th>
+                <th>@Localize["first_name"]</th>
+                <th>@Localize["family_name"]</th>
+                <th>@Localize["phone_number"]</th>
+                <th>@Localize["email"]</th>
+                <th>@Localize["id_card_number"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var contactperson in contactPersons)
+            {
+                <ContextMenuTrigger WrapperTag="tr" MenuId="tableContextMenu" Data="contactperson">
+                @for (int i = 0; i < customers.Count(); i++)
+                {
+                    @if(customers.ElementAt(i).Id == contactperson.CustomerId)
+                    {
+                        
+                            <td>@customers.ElementAt(i).Name</td>
+                            <td>@customers.ElementAt(i).Idnumber</td>
+                            <td>@contactperson.Name</td>
+                            <td>@contactperson.Surname</td>
+                            <td>@contactperson.Phone</td>
+                            <td>@contactperson.Email</td>
+                            <td>@contactperson.IDcard_number</td>
+                        
+                    }
+                }
+                </ContextMenuTrigger>
+                
+            }
+        </tbody>
+    </table>
+    <ContextMenu Id="tableContextMenu">
+        <Item OnClick="@editCustomer"> @Localize["edit"]</Item>
+        <Item OnClick="@DeleteClick"> @Localize["delete"]</Item>
+    </ContextMenu>
+</body>
+
+
+
+
+
+
+@code {
+    public IEnumerable<Customer> customers;
+    public IEnumerable<Contact_Person> contactPersons;
+    public Customer custo;
+    public Contact_Person contp;
+    private bool isCzechLanguage = true;
+    protected override void OnInitialized()
+    {
+        customers = CustomerController.GetCustomers();
+        contactPersons = ContactPersonController.GetContactPersons();
+    }
+
+    void DeleteClick(ItemClickEventArgs e)
+    {
+        var currentRow = e.Data as Contact_Person;
+        ContactPersonController.DeleteContactPerson(currentRow);
+        NavManager.NavigateTo("/all_clients", true);
+    }
+
+    public void addCustomer()
+    {
+        NavManager.NavigateTo("/add_customer");
+    }
+
+    public void editCustomer(ItemClickEventArgs e)
+    {
+        Contact_Person contact_Person = e.Data as Contact_Person;
+        Customer customer = CustomerController.GetCustomerById(contact_Person.CustomerId);
+        myCustomerContainer.SetValue(customer, contact_Person);
+        NavManager.NavigateTo("/edit_customer");
+
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        customers = CustomerController.GetCustomers();
+        contactPersons = ContactPersonController.GetContactPersons();
+        await JSRuntime.InvokeAsync<object>("ClientsAndBorrows", "#clients");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+}

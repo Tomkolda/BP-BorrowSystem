@@ -1,0 +1,14 @@
+﻿@inject NavigationManager navManager
+@inject MyEmployeeContainer employeeController
+
+@page "/logout"
+
+<p>Please wait while logout...</p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        employeeController.SetValue(null);
+        navManager.NavigateTo("/", true);
+    }
+}
