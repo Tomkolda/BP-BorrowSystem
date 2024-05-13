@@ -1,0 +1,12 @@
+﻿
+@inject NavigationManager Nav
+
+<button class="btn btn-secondary" style="height:20px;width:20px" @onclick="OnSelected"></button>
+
+@code {
+
+    private void OnSelected()
+    {
+        Nav.NavigateTo("CultureControler", true);
+    }
+}
